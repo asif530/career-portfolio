@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GitHub Portfolio - asif530. Showcasing 63+ repositories built with modern technologies.">
+    <title>Career Portfolio - asif530</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom styles -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Career Portfolio - asif530">
+    <meta property="og:description" content="GitHub Portfolio showcasing 63+ repositories">
+    <meta property="og:type" content="website">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#home">
+                <i class="fab fa-github"></i> Portfolio
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#profile">Profile</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#repositories">Repositories</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#about">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#contact">Contact</a>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light btn-sm ms-2" id="darkModeToggle" title="Toggle dark mode">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light btn-sm ms-2" id="layoutToggle" title="Toggle layout">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Profile Section -->
+    <section id="profile" class="py-5 bg-light">
+        <div class="container">
+            <div class="row text-center">
+                <div class="col-md-12">
+                    <img src="https://avatars.githubusercontent.com/u/31234567?v=4"
+                         alt="Profile" class="rounded-circle mb-3" width="150" height="150">
+                    <h1 class="mb-2">asif530</h1>
+                    <p class="lead mb-3">Java Backend Engineer | Spring Boot Specialist</p>
+                    <p class="text-muted">Building scalable microservices, exploring modern cloud technologies, and creating production-grade applications with Spring Boot, gRPC, and cloud-native patterns.</p>
+
+                    <!-- Social Links -->
+                    <div class="social-links mt-4">
+                        <a href="https://github.com/asif530" target="_blank" class="btn btn-dark btn-sm me-2">
+                            <i class="fab fa-github"></i> GitHub
+                        </a>
+                        <a href="mailto:asifkamal530@gmail.com" class="btn btn-danger btn-sm me-2">
+                            <i class="fas fa-envelope"></i> Email
+                        </a>
+                        <a href="https://linkedin.com/in/asif530" target="_blank" class="btn btn-info btn-sm me-2">
+                            <i class="fab fa-linkedin"></i> LinkedIn
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Search & Filter Section -->
+    <section id="filters" class="py-4 bg-white sticky-top" style="top: 56px; z-index: 99;">
+        <div class="container">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" id="searchInput" class="form-control"
+                           placeholder="Search repositories...">
+                </div>
+                <div class="col-md-3">
+                    <select id="technologyFilter" class="form-select" multiple size="1">
+                        <option value="">All Technologies</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="sortBy" class="form-select">
+                        <option value="updated">Latest Updated</option>
+                        <option value="created">Recently Created</option>
+                        <option value="stars">Most Stars</option>
+                        <option value="name">Name (A-Z)</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                        <i class="fas fa-redo"></i> Clear
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2">
+                <small class="text-muted">
+                    <span id="resultCount">Loading repositories...</span>
+                </small>
+            </div>
+        </div>
+    </section>
+
+    <!-- Repositories Section -->
+    <section id="repositories" class="py-5">
+        <div class="container">
+            <h2 class="mb-4">GitHub Repositories</h2>
+
+            <!-- Card View (Default) -->
+            <div id="cardView" class="row g-4">
+                <!-- Populated by JavaScript -->
+            </div>
+
+            <!-- Table View (Hidden by default) -->
+            <div id="tableView" style="display: none;">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Language</th>
+                                <th>⭐ Stars</th>
+                                <th>Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- Populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" style="display: none;" class="text-center py-5">
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <h4>No repositories found</h4>
+                <p class="text-muted">Try adjusting your search or filters</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-5 bg-light">
+        <div class="container">
+            <h2 class="mb-4">About Me</h2>
+            <div class="row">
+                <div class="col-md-8">
+                    <p>I'm a passionate Java backend engineer with expertise in building scalable microservices using Spring Boot and modern cloud technologies.</p>
+                    <p>With 4+ years of experience, I specialize in:</p>
+                    <ul>
+                        <li>Spring Boot (3.x & 4.x) application development</li>
+                        <li>Microservices architecture and distributed systems</li>
+                        <li>gRPC and Protocol Buffers for efficient communication</li>
+                        <li>Database design (PostgreSQL, Hibernate ORM)</li>
+                        <li>Message brokers (RabbitMQ, Kafka)</li>
+                        <li>Cloud observability (Prometheus, Grafana, OpenTelemetry)</li>
+                        <li>CI/CD pipelines and DevOps practices</li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h5>Key Technologies</h5>
+                    <div class="tags mb-3">
+                        <span class="badge bg-primary">Java</span>
+                        <span class="badge bg-primary">Spring Boot</span>
+                        <span class="badge bg-success">PostgreSQL</span>
+                        <span class="badge bg-success">gRPC</span>
+                        <span class="badge bg-info">Docker</span>
+                        <span class="badge bg-info">Kubernetes</span>
+                        <span class="badge bg-warning">RabbitMQ</span>
+                        <span class="badge bg-warning">Kafka</span>
+                        <span class="badge bg-danger">REST APIs</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-5">
+        <div class="container">
+            <h2 class="mb-4">Get in Touch</h2>
+            <div class="row">
+                <div class="col-md-8">
+                    <p>Feel free to reach out through any of these channels:</p>
+                    <ul class="list-unstyled">
+                        <li class="mb-3">
+                            <a href="mailto:asifkamal530@gmail.com" class="text-decoration-none">
+                                <i class="fas fa-envelope me-2"></i> asifkamal530@gmail.com
+                            </a>
+                        </li>
+                        <li class="mb-3">
+                            <a href="https://github.com/asif530" target="_blank" class="text-decoration-none">
+                                <i class="fab fa-github me-2"></i> github.com/asif530
+                            </a>
+                        </li>
+                        <li class="mb-3">
+                            <a href="https://linkedin.com/in/asif530" target="_blank" class="text-decoration-none">
+                                <i class="fab fa-linkedin me-2"></i> linkedin.com/in/asif530
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-2">&copy; 2026 asif530. All repositories are open source.</p>
+            <small class="text-muted">
+                Last updated: <span id="lastUpdated">Loading...</span> |
+                <a href="https://github.com/asif530/career-portfolio" target="_blank" class="text-muted">View Source</a>
+            </small>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>

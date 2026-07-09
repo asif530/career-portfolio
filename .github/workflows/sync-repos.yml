@@ -1,0 +1,80 @@
+name: Sync GitHub Repos Daily
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:      # Manual trigger button in GitHub UI
+
+jobs:
+  sync-repos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch current repos from GitHub API
+        run: |
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/user/repos?per_page=100&sort=updated&affiliation=owner" \
+            > repos-current.json
+
+      - name: Check if previous repos file exists
+        id: check_file
+        run: |
+          if [ -f repos-previous.json ]; then
+            echo "file_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "file_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Compare repos and find new ones
+        if: steps.check_file.outputs.file_exists == 'true'
+        run: |
+          # Extract repo names
+          cat repos-current.json | jq -r '.[].name' | sort > current-names.txt
+          cat repos-previous.json | jq -r '.[].name' | sort > previous-names.txt
+
+          # Find new repos (in current but not in previous)
+          comm -23 current-names.txt previous-names.txt > new-repos.txt
+
+          # Count new repos
+          NEW_COUNT=$(wc -l < new-repos.txt)
+          echo "Found $NEW_COUNT new repositories"
+
+          if [ $NEW_COUNT -gt 0 ]; then
+            echo "NEW_REPOS_FOUND=true" >> $GITHUB_ENV
+            echo "NEW_COUNT=$NEW_COUNT" >> $GITHUB_ENV
+            cat new-repos.txt
+          fi
+
+      - name: Generate repos.json for website
+        run: |
+          # Create JSON with metadata
+          cat repos-current.json | jq '{
+            repos: .,
+            metadata: {
+              totalCount: length,
+              lastUpdated: now | todate,
+              newReposFound: (if env.NEW_REPOS_FOUND == "true" then (env.NEW_COUNT | tonumber) else 0 end)
+            }
+          }' > repos.json
+
+      - name: Update previous repos file
+        run: |
+          cp repos-current.json repos-previous.json
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+          git add repos.json repos-previous.json
+
+          if [ "${{ env.NEW_REPOS_FOUND }}" = "true" ]; then
+            git commit -m "🎉 Found ${{ env.NEW_COUNT }} new repo(s) - $(date +'%Y-%m-%d %H:%M:%S UTC')"
+          else
+            git commit -m "📦 Synced repos from GitHub API - $(date +'%Y-%m-%d %H:%M:%S UTC')" || true
+          fi
+
+          git push

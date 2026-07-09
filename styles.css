@@ -1,0 +1,161 @@
+/* Custom styles for GitHub Portfolio */
+
+:root {
+    --primary-color: #667eea;
+    --secondary-color: #764ba2;
+}
+
+/* Dark mode styles */
+body.dark-mode {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+}
+
+body.dark-mode .navbar {
+    background-color: #0d0d0d !important;
+}
+
+body.dark-mode .bg-light {
+    background-color: #2d2d2d !important;
+}
+
+body.dark-mode .bg-white {
+    background-color: #1e1e1e !important;
+}
+
+body.dark-mode .card {
+    background-color: #2d2d2d;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+body.dark-mode .table {
+    color: #e0e0e0;
+}
+
+body.dark-mode .table-hover tbody tr:hover {
+    background-color: #404040;
+}
+
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #444;
+}
+
+body.dark-mode .form-control:focus,
+body.dark-mode .form-select:focus {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border-color: var(--primary-color);
+}
+
+/* Repository cards */
+.repo-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #e0e0e0;
+}
+
+.repo-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .repo-card:hover {
+    box-shadow: 0 10px 25px rgba(255, 255, 255, 0.1);
+}
+
+.repo-name {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.repo-name:hover {
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+
+/* Badges */
+.badge {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Profile section */
+.social-links a {
+    margin: 0 5px;
+    transition: transform 0.2s;
+}
+
+.social-links a:hover {
+    transform: scale(1.1);
+}
+
+/* Tags */
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.tags .badge {
+    margin-bottom: 5px;
+}
+
+/* Sticky filters */
+#filters {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode #filters {
+    box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
+}
+
+/* Loading state */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Empty state */
+#emptyState {
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar-collapse {
+        margin-top: 10px;
+    }
+
+    .col-md-12 {
+        padding: 10px;
+    }
+
+    #filters .row {
+        flex-wrap: wrap;
+    }
+
+    #filters .col-md-4,
+    #filters .col-md-3,
+    #filters .col-md-2 {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+/* Smooth transitions */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.repo-card,
+.btn,
+input,
+select {
+    transition: background-color 0.2s, color 0.2s, transform 0.2s !important;
+}
