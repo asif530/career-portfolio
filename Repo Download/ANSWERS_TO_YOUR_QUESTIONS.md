@@ -9,7 +9,7 @@
 **New Interactive Setup Script** (`setup_and_download.py`):
 
 1. **Automatically detects** if Python 3 is installed
-2. **If Python IS found**: Proceeds normally ✅
+2. **If Python IS found**: Proceeds normally ✅FB
 3. **If Python NOT found**: Prompts user with options:
    ```
    ❌ Python 3 not found

@@ -203,18 +203,26 @@ class GitHubRepoDownloader:
 
 
 def get_github_token():
-    """Prompt user for GitHub token"""
-    print("\n🔑 GitHub Personal Access Token Required")
+    """Prompt user for GitHub token (optional)"""
+    print("\n🔑 GitHub Personal Access Token (Optional)")
+    print("   Without token: Public repos only, 60 requests/hour limit")
+    print("   With token: Faster, 5000 requests/hour, can access private repos")
     print("   Create one at: https://github.com/settings/tokens")
-    print("   Scopes needed: 'repo' (full control of private repositories)")
     print("   NOTE: Token will NOT be stored, only used for this session\n")
 
-    token = getpass.getpass("Enter your GitHub Personal Access Token: ").strip()
+    response = input("Do you have a GitHub token? (y/n): ").strip().lower()
 
-    if not token:
-        print("❌ Token is required (or use --ssh flag for SSH authentication)")
+    if response != "y":
+        print("⚠️  Proceeding without token (public repos only)")
         return None
 
+    token = getpass.getpass("Enter your GitHub Personal Access Token (or press Enter to skip): ").strip()
+
+    if not token:
+        print("⚠️  No token provided, proceeding without")
+        return None
+
+    print("✅ Token set")
     return token
 
 
@@ -266,8 +274,7 @@ Examples:
 
     if not use_ssh and not args.token:
         token = get_github_token()
-        if not token:
-            sys.exit(1)
+        # Token is optional, don't exit if None
     else:
         token = args.token
 
