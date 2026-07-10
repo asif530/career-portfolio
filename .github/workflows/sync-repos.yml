@@ -31,21 +31,24 @@ jobs:
       - name: Compare repos and find new ones
         if: steps.check_file.outputs.file_exists == 'true'
         run: |
-          # Extract repo names
-          cat repos-current.json | jq -r '.[].name' | sort > current-names.txt
-          cat repos-previous.json | jq -r '.[].name' | sort > previous-names.txt
+          # Extract repo ids (stable across renames, unlike name)
+          cat repos-current.json | jq -r '.[].id' | sort > current-ids.txt
+          cat repos-previous.json | jq -r '.[].id' | sort > previous-ids.txt
 
-          # Find new repos (in current but not in previous)
-          comm -23 current-names.txt previous-names.txt > new-repos.txt
+          # Find new repos (id in current but not in previous)
+          comm -23 current-ids.txt previous-ids.txt > new-repo-ids.txt
 
           # Count new repos
-          NEW_COUNT=$(wc -l < new-repos.txt)
+          NEW_COUNT=$(wc -l < new-repo-ids.txt)
           echo "Found $NEW_COUNT new repositories"
 
           if [ $NEW_COUNT -gt 0 ]; then
             echo "NEW_REPOS_FOUND=true" >> $GITHUB_ENV
             echo "NEW_COUNT=$NEW_COUNT" >> $GITHUB_ENV
-            cat new-repos.txt
+            # Resolve ids back to names for a readable log
+            jq -r --slurpfile ids new-repo-ids.txt \
+              '.[] | select(.id as $i | $ids | index($i)) | .name' \
+              repos-current.json
           fi
 
       - name: Generate repos.json for website
