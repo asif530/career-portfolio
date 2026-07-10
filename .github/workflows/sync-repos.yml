@@ -51,15 +51,42 @@ jobs:
               repos-current.json
           fi
 
+      - name: Detect renamed repos
+        if: steps.check_file.outputs.file_exists == 'true'
+        run: |
+          # For ids present in both fetches, flag any whose name changed
+          RENAMES=$(jq -n --slurpfile prev repos-previous.json --slurpfile curr repos-current.json '
+            ($prev[0] | map({(.id|tostring): .name}) | add // {}) as $prevMap |
+            [ $curr[0][] | . as $c | ($prevMap[($c.id|tostring)]) as $old |
+                select($old != null and $old != $c.name) |
+                {id: $c.id, oldName: $old, newName: $c.name} ]
+          ')
+
+          RENAMED_COUNT=$(echo "$RENAMES" | jq 'length')
+          echo "Found $RENAMED_COUNT renamed repositories"
+
+          if [ "$RENAMED_COUNT" -gt 0 ]; then
+            echo "RENAMED_REPOS_FOUND=true" >> $GITHUB_ENV
+            echo "RENAMED_COUNT=$RENAMED_COUNT" >> $GITHUB_ENV
+            echo "$RENAMES" | jq -r '.[] | "\(.oldName) -> \(.newName)"'
+            echo "$RENAMES" > renamed-repos.json
+          fi
+
       - name: Generate repos.json for website
         run: |
+          RENAMES_JSON="[]"
+          if [ -f renamed-repos.json ]; then
+            RENAMES_JSON=$(cat renamed-repos.json)
+          fi
+
           # Create JSON with metadata
-          cat repos-current.json | jq '{
+          cat repos-current.json | jq --argjson renames "$RENAMES_JSON" '{
             repos: .,
             metadata: {
               totalCount: length,
               lastUpdated: now | todate,
-              newReposFound: (if env.NEW_REPOS_FOUND == "true" then (env.NEW_COUNT | tonumber) else 0 end)
+              newReposFound: (if env.NEW_REPOS_FOUND == "true" then (env.NEW_COUNT | tonumber) else 0 end),
+              renamedRepos: $renames
             }
           }' > repos.json
 
@@ -74,8 +101,12 @@ jobs:
 
           git add repos.json repos-previous.json
 
-          if [ "${{ env.NEW_REPOS_FOUND }}" = "true" ]; then
+          if [ "${{ env.NEW_REPOS_FOUND }}" = "true" ] && [ "${{ env.RENAMED_REPOS_FOUND }}" = "true" ]; then
+            git commit -m "🎉 Found ${{ env.NEW_COUNT }} new repo(s), ${{ env.RENAMED_COUNT }} renamed - $(date +'%Y-%m-%d %H:%M:%S UTC')"
+          elif [ "${{ env.NEW_REPOS_FOUND }}" = "true" ]; then
             git commit -m "🎉 Found ${{ env.NEW_COUNT }} new repo(s) - $(date +'%Y-%m-%d %H:%M:%S UTC')"
+          elif [ "${{ env.RENAMED_REPOS_FOUND }}" = "true" ]; then
+            git commit -m "✏️ ${{ env.RENAMED_COUNT }} repo(s) renamed - $(date +'%Y-%m-%d %H:%M:%S UTC')"
           else
             git commit -m "📦 Synced repos from GitHub API - $(date +'%Y-%m-%d %H:%M:%S UTC')" || true
           fi
