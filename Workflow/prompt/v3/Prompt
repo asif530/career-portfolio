@@ -1,0 +1,163 @@
+The previous refactoring is a significant improvement and the overall architecture is now aligned with the intended design.
+
+Please **keep the current architecture**.
+
+Specifically:
+
+* Keep the GitHub Action as a thin orchestrator.
+* Keep a single `scripts/sync.sh`.
+* Keep the current function-based organization.
+* Keep the existing global runtime state.
+* Do **not** split the script into multiple files.
+* Do **not** redesign the project.
+
+This is a refinement pass, not another refactoring.
+
+I would like you to address the following items.
+
+## 1. Implement GitHub API pagination
+
+The repository fetch currently retrieves only the first page (`per_page=100`).
+
+Implement simple pagination.
+
+Requirements:
+
+* Continue requesting pages until an empty page is returned.
+* Merge all pages into one JSON array.
+* Keep the implementation readable.
+* Do not introduce unnecessary abstractions.
+* Preserve existing behavior for accounts with fewer than 100 repositories.
+
+---
+
+## 2. Fix the commit/push flow
+
+The workflow should not perform a push when there are no staged changes.
+
+Use a staged-change check after `git add`.
+
+Preferred flow:
+
+```
+git add
+
+↓
+
+if nothing staged
+
+    exit successfully
+
+↓
+
+git commit
+
+↓
+
+git push
+```
+
+Avoid relying on failed commits to detect this condition.
+
+---
+
+## 3. Prevent divide-by-zero in language aggregation
+
+When calculating language percentages, gracefully handle cases where:
+
+* there are no repositories,
+* repositories contain no detectable language data,
+* the total byte count is zero.
+
+The workflow should still generate valid JSON and complete successfully.
+
+---
+
+## 4. Reduce repeated jq parsing in generateIndexHtml()
+
+The current implementation parses `profile.json` several times.
+
+Consolidate these lookups where doing so improves readability.
+
+Avoid dense or difficult-to-maintain jq expressions.
+
+Readable code is preferred.
+
+---
+
+## 5. Rename generateWebsite()
+
+Rename:
+
+```
+generateWebsite()
+```
+
+to
+
+```
+generateIndexHtml()
+```
+
+The new name better reflects its responsibility and improves naming consistency with:
+
+* generateReposJson()
+* generateProfileJson()
+
+---
+
+## 6. Improve script organization
+
+Keep the existing global runtime state.
+
+Do **not** convert it into function parameters.
+
+Instead, improve readability by separating:
+
+* immutable configuration (`readonly` values),
+* mutable runtime state.
+
+This is purely an organizational improvement.
+
+---
+
+## 7. Preserve the current architecture
+
+Do not introduce additional shell scripts.
+
+Do not introduce new technologies.
+
+Do not redesign the workflow.
+
+The current architecture (GitHub workflow + single `sync.sh`) is intentional and should remain unchanged.
+
+---
+
+## 8. Preserve all observable behavior
+
+Everything that currently works must continue to work.
+
+Including:
+
+* scheduled execution,
+* manual execution,
+* repository synchronization,
+* rename detection,
+* new repository detection,
+* language aggregation,
+* profile generation,
+* website generation,
+* metadata generation,
+* commit generation,
+* git push.
+
+Generated JSON schemas and website behavior must remain unchanged.
+
+---
+
+Please provide:
+
+1. Updated workflow (only if changes are required).
+2. Updated `sync.sh`.
+3. A brief explanation for each modification.
+4. Confirmation that no observable behavior has changed other than the intended robustness improvements.
