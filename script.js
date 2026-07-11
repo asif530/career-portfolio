@@ -1,126 +1,186 @@
+// ============================================================
 // GitHub Portfolio - Main JavaScript
-// This file contains all the logic for the portfolio
+// Loads repository data and drives search, filtering, sorting,
+// layout switching, and dark mode for the portfolio page.
+// ============================================================
 
-// Global state
-let allRepos = [];
-let filteredRepos = [];
-let currentLayout = 'card'; // 'card' or 'table'
-let darkMode = false;
+// ============================================================
+// Configuration / Constants
+// ============================================================
+const DATA_URL = 'repos.json';
 
-// Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initializing GitHub Portfolio...');
+const LAYOUT = {
+    CARD: 'card',
+    TABLE: 'table',
+};
 
-    // Load saved preferences
+const SORT_BY = {
+    UPDATED: 'updated',
+    CREATED: 'created',
+    STARS: 'stars',
+    NAME: 'name',
+};
+
+const DEFAULT_SORT = SORT_BY.UPDATED;
+
+const ALERT_TYPE = {
+    INFO: 'info',
+    DANGER: 'danger',
+};
+
+const STORAGE_KEYS = {
+    LAYOUT: 'portfolioLayout',
+    DARK_MODE: 'portfolioDarkMode',
+    LAST_REPOS: 'lastRepos',
+};
+
+const NOTIFICATION_DURATION_MS = 3000;
+
+// ============================================================
+// Application State
+// ============================================================
+const state = {
+    repositories: [],
+    filteredRepositories: [],
+    layout: LAYOUT.CARD,
+    darkMode: false,
+};
+
+// ============================================================
+// DOM Cache
+// ============================================================
+const dom = {};
+
+function cacheDomElements() {
+    dom.searchInput = document.getElementById('searchInput');
+    dom.technologyFilter = document.getElementById('technologyFilter');
+    dom.sortBy = document.getElementById('sortBy');
+    dom.clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    dom.darkModeToggle = document.getElementById('darkModeToggle');
+    dom.darkModeIcon = document.querySelector('#darkModeToggle i');
+    dom.layoutToggle = document.getElementById('layoutToggle');
+    dom.cardView = document.getElementById('cardView');
+    dom.tableView = document.getElementById('tableView');
+    dom.tableBody = document.getElementById('tableBody');
+    dom.emptyState = document.getElementById('emptyState');
+    dom.resultCount = document.getElementById('resultCount');
+    dom.lastUpdated = document.getElementById('lastUpdated');
+    // First ".container" in the DOM (inside the profile section) is used
+    // as the anchor point for inserting alerts above the page content.
+    dom.alertAnchor = document.querySelector('.container');
+}
+
+// ============================================================
+// Initialization
+// ============================================================
+function initializeApp() {
+    cacheDomElements();
     initializeDarkMode();
     loadSavedLayout();
-
-    // Load repositories
-    loadRepositories();
-
-    // Setup event listeners
     setupEventListeners();
+    loadRepositories();
+}
 
-    // Check for new repos
-    checkForNewRepos();
-});
+// ============================================================
+// Data Loading
+// ============================================================
+async function loadRepositories() {
+    try {
+        const response = await fetch(DATA_URL);
 
-/**
- * Load repositories from repos.json
- */
-function loadRepositories() {
-    console.log('Loading repositories...');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-    fetch('repos.json')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            allRepos = data.repos || [];
-            console.log(`Loaded ${allRepos.length} repositories`);
+        const data = await response.json();
+        state.repositories = data.repos || [];
 
-            // Update last updated time
-            if (data.metadata) {
-                updateLastUpdatedTime(data.metadata.lastUpdated);
-            }
+        if (data.metadata) {
+            updateLastUpdatedTime(data.metadata.lastUpdated);
+        }
 
-            // Render repositories
-            renderRepositories(allRepos);
+        populateTechnologyFilter();
+        applyFilters();
 
-            // Populate filter options
-            populateFilters();
+        if (data.metadata && data.metadata.newReposFound > 0) {
+            showNotification(`🎉 Found ${data.metadata.newReposFound} new repository(ies)!`);
+        }
 
-            // Show new repo notification if any
-            if (data.metadata && data.metadata.newReposFound > 0) {
-                showNotification(`🎉 Found ${data.metadata.newReposFound} new repository(ies)!`);
-            }
-        })
-        .catch(error => {
-            console.error('Error loading repositories:', error);
-            showError('Failed to load repositories. Please try again later.');
-        });
+        // Only compare against previously stored repos once loading has
+        // actually succeeded, so we never flag "new" repos from empty state.
+        checkForNewRepos();
+    } catch (error) {
+        console.error('Error loading repositories:', error);
+        showError('Failed to load repositories. Please try again later.');
+    }
 }
 
 /**
- * Render repositories based on current layout
+ * Compares freshly loaded repositories against the last snapshot stored in
+ * localStorage and notifies the user if new repositories have appeared.
  */
-function renderRepositories(repos) {
-    console.log(`Rendering ${repos.length} repositories in ${currentLayout} view`);
+function checkForNewRepos() {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.LAST_REPOS) || '[]');
 
-    if (currentLayout === 'card') {
+    if (state.repositories.length === 0) {
+        return;
+    }
+
+    if (stored.length > 0) {
+        const newRepos = state.repositories.filter(
+            repo => !stored.some(storedRepo => storedRepo.id === repo.id)
+        );
+
+        if (newRepos.length > 0) {
+            showNotification(`🎉 Found ${newRepos.length} new repository(ies)!`);
+            localStorage.setItem(STORAGE_KEYS.LAST_REPOS, JSON.stringify(state.repositories));
+        }
+    } else {
+        localStorage.setItem(STORAGE_KEYS.LAST_REPOS, JSON.stringify(state.repositories));
+    }
+}
+
+// ============================================================
+// Rendering
+// ============================================================
+function renderRepositories(repos) {
+    if (state.layout === LAYOUT.CARD) {
         renderCardView(repos);
     } else {
         renderTableView(repos);
     }
 
-    // Update result counter
+    updateLayoutVisibility();
     updateResultCount(repos.length);
+    toggleEmptyState(repos.length === 0);
+}
 
-    // Show empty state if no repos
-    if (repos.length === 0) {
-        document.getElementById('emptyState').style.display = 'block';
-        document.getElementById('cardView').innerHTML = '';
-        document.getElementById('tableBody').innerHTML = '';
-    } else {
-        document.getElementById('emptyState').style.display = 'none';
+function renderCardView(repos) {
+    dom.cardView.innerHTML = '';
+    repos.forEach(repo => dom.cardView.appendChild(createRepoCard(repo)));
+}
+
+function renderTableView(repos) {
+    dom.tableBody.innerHTML = '';
+    repos.forEach(repo => dom.tableBody.appendChild(createTableRow(repo)));
+}
+
+function toggleEmptyState(isEmpty) {
+    dom.emptyState.classList.toggle('d-none', !isEmpty);
+
+    if (isEmpty) {
+        dom.cardView.innerHTML = '';
+        dom.tableBody.innerHTML = '';
     }
 }
 
 /**
- * Render repositories as cards
- */
-function renderCardView(repos) {
-    const cardView = document.getElementById('cardView');
-    cardView.innerHTML = '';
-
-    repos.forEach(repo => {
-        const card = createRepoCard(repo);
-        cardView.appendChild(card);
-    });
-}
-
-/**
- * Render repositories as table
- */
-function renderTableView(repos) {
-    const tableBody = document.getElementById('tableBody');
-    tableBody.innerHTML = '';
-
-    repos.forEach(repo => {
-        const row = createTableRow(repo);
-        tableBody.appendChild(row);
-    });
-}
-
-/**
- * Create a repository card element
+ * Builds the card layout for a single repository, including its title,
+ * description, language/topic badges, stats line, and action buttons.
  */
 function createRepoCard(repo) {
-    const col = document.createElement('div');
-    col.className = 'col-md-4';
+    const column = document.createElement('div');
+    column.className = 'col-md-4';
 
     const card = document.createElement('div');
     card.className = 'card repo-card h-100';
@@ -128,60 +188,69 @@ function createRepoCard(repo) {
     const body = document.createElement('div');
     body.className = 'card-body';
 
-    // Title and copy button
-    const titleDiv = document.createElement('div');
-    titleDiv.className = 'd-flex justify-content-between align-items-start mb-2';
+    body.appendChild(createCardHeader(repo));
+    body.appendChild(createCardDescription(repo));
 
-    const titleLink = document.createElement('a');
-    titleLink.href = repo.html_url;
-    titleLink.target = '_blank';
-    titleLink.className = 'repo-name h5 card-title';
-    titleLink.textContent = repo.name;
-
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'btn btn-sm btn-outline-secondary copy-btn';
-    copyBtn.title = 'Copy link';
-    copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
-    copyBtn.onclick = (e) => {
-        e.preventDefault();
-        copyToClipboard(repo.html_url);
-    };
-
-    titleDiv.appendChild(titleLink);
-    titleDiv.appendChild(copyBtn);
-    body.appendChild(titleDiv);
-
-    // Description
-    const desc = document.createElement('p');
-    desc.className = 'card-text text-muted';
-    desc.textContent = repo.description || 'No description provided';
-    body.appendChild(desc);
-
-    // Language and topics
-    if (repo.language || (repo.topics && repo.topics.length > 0)) {
-        const tagsDiv = document.createElement('div');
-        tagsDiv.className = 'mb-2';
-
-        if (repo.language) {
-            const badge = document.createElement('span');
-            badge.className = 'badge bg-primary me-1';
-            badge.textContent = repo.language;
-            tagsDiv.appendChild(badge);
-        }
-
-        if (repo.topics && repo.topics.length > 0) {
-            repo.topics.forEach(topic => {
-                const badge = document.createElement('span');
-                badge.className = 'badge bg-secondary me-1';
-                badge.textContent = topic;
-                tagsDiv.appendChild(badge);
-            });
-        }
-
-        body.appendChild(tagsDiv);
+    const tags = createCardTags(repo);
+    if (tags) {
+        body.appendChild(tags);
     }
 
-    // Stats
+    body.appendChild(createCardStats(repo));
+    body.appendChild(createExternalLink(repo.html_url, 'View on GitHub →', 'btn btn-sm btn-primary'));
+
+    card.appendChild(body);
+    column.appendChild(card);
+
+    return column;
+}
+
+function createCardHeader(repo) {
+    const header = document.createElement('div');
+    header.className = 'd-flex justify-content-between align-items-start mb-2';
+
+    const nameLink = createExternalLink(repo.html_url, repo.name, 'repo-name h5 card-title');
+    const copyButton = createCopyButton(repo.html_url, {
+        className: 'btn btn-sm btn-outline-secondary copy-btn',
+        title: 'Copy link',
+    });
+
+    header.appendChild(nameLink);
+    header.appendChild(copyButton);
+
+    return header;
+}
+
+function createCardDescription(repo) {
+    const description = document.createElement('p');
+    description.className = 'card-text text-muted';
+    description.textContent = repo.description || 'No description provided';
+    return description;
+}
+
+function createCardTags(repo) {
+    const hasLanguage = Boolean(repo.language);
+    const hasTopics = Boolean(repo.topics && repo.topics.length > 0);
+
+    if (!hasLanguage && !hasTopics) {
+        return null;
+    }
+
+    const tagsContainer = document.createElement('div');
+    tagsContainer.className = 'mb-2';
+
+    if (hasLanguage) {
+        tagsContainer.appendChild(createBadge(repo.language, 'bg-primary'));
+    }
+
+    if (hasTopics) {
+        repo.topics.forEach(topic => tagsContainer.appendChild(createBadge(topic, 'bg-secondary')));
+    }
+
+    return tagsContainer;
+}
+
+function createCardStats(repo) {
     const stats = document.createElement('small');
     stats.className = 'text-muted d-block mb-2';
     stats.innerHTML = `
@@ -189,41 +258,24 @@ function createRepoCard(repo) {
         🍴 ${repo.forks_count} |
         Updated ${formatDate(repo.updated_at)}
     `;
-    body.appendChild(stats);
-
-    // GitHub link button
-    const btn = document.createElement('a');
-    btn.href = repo.html_url;
-    btn.target = '_blank';
-    btn.className = 'btn btn-sm btn-primary';
-    btn.innerHTML = 'View on GitHub →';
-    body.appendChild(btn);
-
-    card.appendChild(body);
-    col.appendChild(card);
-
-    return col;
+    return stats;
 }
 
-/**
- * Create a table row for repository
- */
 function createTableRow(repo) {
     const row = document.createElement('tr');
 
     const nameCell = document.createElement('td');
-    const nameLink = document.createElement('a');
-    nameLink.href = repo.html_url;
-    nameLink.target = '_blank';
-    nameLink.textContent = repo.name;
-    nameCell.appendChild(nameLink);
+    nameCell.appendChild(createExternalLink(repo.html_url, repo.name));
 
-    const descCell = document.createElement('td');
-    descCell.textContent = repo.description || '—';
+    const descriptionCell = document.createElement('td');
+    descriptionCell.textContent = repo.description || '—';
 
-    const langCell = document.createElement('td');
-    langCell.innerHTML = repo.language ?
-        `<span class="badge bg-primary">${repo.language}</span>` : '—';
+    const languageCell = document.createElement('td');
+    if (repo.language) {
+        languageCell.appendChild(createBadge(repo.language, 'bg-primary', ''));
+    } else {
+        languageCell.textContent = '—';
+    }
 
     const starsCell = document.createElement('td');
     starsCell.textContent = repo.stargazers_count;
@@ -232,117 +284,120 @@ function createTableRow(repo) {
     updatedCell.textContent = formatDate(repo.updated_at);
 
     const actionsCell = document.createElement('td');
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'btn btn-sm btn-outline-secondary';
-    copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
-    copyBtn.onclick = (e) => {
-        e.preventDefault();
-        copyToClipboard(repo.html_url);
-    };
-    actionsCell.appendChild(copyBtn);
+    actionsCell.appendChild(createCopyButton(repo.html_url));
 
-    row.appendChild(nameCell);
-    row.appendChild(descCell);
-    row.appendChild(langCell);
-    row.appendChild(starsCell);
-    row.appendChild(updatedCell);
-    row.appendChild(actionsCell);
+    row.append(nameCell, descriptionCell, languageCell, starsCell, updatedCell, actionsCell);
 
     return row;
 }
 
-/**
- * Populate filter dropdowns
- */
-function populateFilters() {
-    // Get unique technologies/languages
+// ---- Shared element builders -------------------------------------------
+
+function createExternalLink(url, text, className) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    if (className) {
+        link.className = className;
+    }
+    link.textContent = text;
+    return link;
+}
+
+function createBadge(text, bgClass, extraClass = 'me-1') {
+    const badge = document.createElement('span');
+    badge.className = extraClass ? `badge ${bgClass} ${extraClass}` : `badge ${bgClass}`;
+    badge.textContent = text;
+    return badge;
+}
+
+function createCopyButton(url, { className = 'btn btn-sm btn-outline-secondary', title } = {}) {
+    const button = document.createElement('button');
+    button.className = className;
+    if (title) {
+        button.title = title;
+    }
+    button.innerHTML = '<i class="fas fa-copy"></i>';
+    button.addEventListener('click', event => {
+        event.preventDefault();
+        copyToClipboard(url);
+    });
+    return button;
+}
+
+function updateLayoutVisibility() {
+    const isCardView = state.layout === LAYOUT.CARD;
+    dom.cardView.classList.toggle('d-none', !isCardView);
+    dom.tableView.classList.toggle('d-none', isCardView);
+}
+
+// ============================================================
+// Filtering
+// ============================================================
+function populateTechnologyFilter() {
     const languages = new Set();
-    allRepos.forEach(repo => {
+    state.repositories.forEach(repo => {
         if (repo.language) {
             languages.add(repo.language);
         }
     });
 
-    const techFilter = document.getElementById('technologyFilter');
-    languages.forEach(lang => {
+    const sortedLanguages = Array.from(languages).sort((a, b) => a.localeCompare(b));
+    sortedLanguages.forEach(language => {
         const option = document.createElement('option');
-        option.value = lang;
-        option.textContent = lang;
-        techFilter.appendChild(option);
+        option.value = language;
+        option.textContent = language;
+        dom.technologyFilter.appendChild(option);
+    });
+}
+
+function filterRepositories(repos, searchTerm, technology) {
+    const normalizedSearch = searchTerm.toLowerCase();
+
+    return repos.filter(repo => {
+        const matchesSearch = repo.name.toLowerCase().includes(normalizedSearch) ||
+            (repo.description && repo.description.toLowerCase().includes(normalizedSearch));
+        const matchesTechnology = !technology || repo.language === technology;
+
+        return matchesSearch && matchesTechnology;
     });
 }
 
 /**
- * Setup event listeners
+ * Reads the current search/technology/sort controls, recomputes the
+ * filtered + sorted repository list, and re-renders it. Used both for
+ * user-driven changes and for applying the default state on page load.
  */
-function setupEventListeners() {
-    // Search input
-    document.getElementById('searchInput').addEventListener('input', function() {
-        filterAndRender();
-    });
+function applyFilters() {
+    const searchTerm = dom.searchInput.value.toLowerCase();
+    const technology = dom.technologyFilter.value;
+    const sortBy = dom.sortBy.value;
 
-    // Technology filter
-    document.getElementById('technologyFilter').addEventListener('change', function() {
-        filterAndRender();
-    });
+    state.filteredRepositories = sortRepositories(
+        filterRepositories(state.repositories, searchTerm, technology),
+        sortBy
+    );
 
-    // Sort dropdown
-    document.getElementById('sortBy').addEventListener('change', function() {
-        filterAndRender();
-    });
-
-    // Dark mode toggle
-    document.getElementById('darkModeToggle').addEventListener('click', function() {
-        toggleDarkMode();
-    });
-
-    // Layout toggle
-    document.getElementById('layoutToggle').addEventListener('click', function() {
-        toggleLayout();
-    });
+    renderRepositories(state.filteredRepositories);
 }
 
-/**
- * Filter and render repositories
- */
-function filterAndRender() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const selectedTech = document.getElementById('technologyFilter').value;
-    const sortBy = document.getElementById('sortBy').value;
-
-    // Filter repositories
-    filteredRepos = allRepos.filter(repo => {
-        const matchesSearch = repo.name.toLowerCase().includes(searchTerm) ||
-                            (repo.description && repo.description.toLowerCase().includes(searchTerm));
-        const matchesTech = !selectedTech || repo.language === selectedTech;
-
-        return matchesSearch && matchesTech;
-    });
-
-    // Sort repositories
-    filteredRepos = sortRepositories(filteredRepos, sortBy);
-
-    // Render
-    renderRepositories(filteredRepos);
-}
-
-/**
- * Sort repositories
- */
+// ============================================================
+// Sorting
+// ============================================================
 function sortRepositories(repos, sortBy) {
     const sorted = [...repos];
 
     switch (sortBy) {
-        case 'updated':
+        case SORT_BY.UPDATED:
             sorted.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
             break;
-        case 'created':
+        case SORT_BY.CREATED:
             sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             break;
-        case 'stars':
+        case SORT_BY.STARS:
             sorted.sort((a, b) => b.stargazers_count - a.stargazers_count);
             break;
-        case 'name':
+        case SORT_BY.NAME:
             sorted.sort((a, b) => a.name.localeCompare(b.name));
             break;
     }
@@ -350,110 +405,74 @@ function sortRepositories(repos, sortBy) {
     return sorted;
 }
 
-/**
- * Toggle between card and table view
- */
-function toggleLayout() {
-    currentLayout = currentLayout === 'card' ? 'table' : 'card';
-    localStorage.setItem('portfolioLayout', currentLayout);
-    filterAndRender();
-}
-
-/**
- * Load saved layout preference
- */
+// ============================================================
+// Layout
+// ============================================================
 function loadSavedLayout() {
-    const saved = localStorage.getItem('portfolioLayout');
+    const saved = localStorage.getItem(STORAGE_KEYS.LAYOUT);
     if (saved) {
-        currentLayout = saved;
+        state.layout = saved;
     }
 }
 
-/**
- * Toggle dark mode
- */
-function toggleDarkMode() {
-    darkMode = !darkMode;
-    document.body.classList.toggle('dark-mode');
-    localStorage.setItem('portfolioDarkMode', darkMode);
-
-    // Update button icon
-    const icon = document.querySelector('#darkModeToggle i');
-    icon.className = darkMode ? 'fas fa-sun' : 'fas fa-moon';
-}
-
-/**
- * Initialize dark mode from saved preference
- */
+// ============================================================
+// Dark Mode
+// ============================================================
 function initializeDarkMode() {
-    const saved = localStorage.getItem('portfolioDarkMode');
+    const saved = localStorage.getItem(STORAGE_KEYS.DARK_MODE);
     if (saved === 'true') {
-        darkMode = true;
+        state.darkMode = true;
         document.body.classList.add('dark-mode');
-        document.querySelector('#darkModeToggle i').className = 'fas fa-sun';
+        updateDarkModeIcon();
     }
 }
 
-/**
- * Copy text to clipboard
- */
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        showNotification('Link copied to clipboard!');
-    }).catch(err => {
-        console.error('Failed to copy:', err);
-    });
+function updateDarkModeIcon() {
+    dom.darkModeIcon.className = state.darkMode ? 'fas fa-sun' : 'fas fa-moon';
 }
 
-/**
- * Show notification
- */
+// ============================================================
+// Notifications
+// ============================================================
+function createAlert(message, type) {
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.setAttribute('role', 'alert');
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    return alert;
+}
+
 function showNotification(message) {
-    // Create bootstrap alert
-    const alert = document.createElement('div');
-    alert.className = 'alert alert-info alert-dismissible fade show';
-    alert.setAttribute('role', 'alert');
-    alert.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-
-    // Insert at top of page
-    const container = document.querySelector('.container');
-    container.parentNode.insertBefore(alert, container);
-
-    // Auto-dismiss after 3 seconds
-    setTimeout(() => {
-        alert.remove();
-    }, 3000);
+    const alert = createAlert(message, ALERT_TYPE.INFO);
+    dom.alertAnchor.parentNode.insertBefore(alert, dom.alertAnchor);
+    setTimeout(() => alert.remove(), NOTIFICATION_DURATION_MS);
 }
 
-/**
- * Show error message
- */
 function showError(message) {
-    const alert = document.createElement('div');
-    alert.className = 'alert alert-danger alert-dismissible fade show';
-    alert.setAttribute('role', 'alert');
-    alert.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-
-    const container = document.querySelector('.container');
-    container.parentNode.insertBefore(alert, container);
+    const alert = createAlert(message, ALERT_TYPE.DANGER);
+    dom.alertAnchor.parentNode.insertBefore(alert, dom.alertAnchor);
 }
 
-/**
- * Format date
- */
+// ============================================================
+// Utilities
+// ============================================================
+async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        showNotification('Link copied to clipboard!');
+    } catch (error) {
+        console.error('Failed to copy:', error);
+    }
+}
+
 function formatDate(dateString) {
     const date = new Date(dateString);
     const now = new Date();
-    const diff = now - date;
-
-    // Convert to days
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const diffMs = now - date;
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
     if (days === 0) return 'today';
     if (days === 1) return 'yesterday';
@@ -465,12 +484,14 @@ function formatDate(dateString) {
 }
 
 /**
- * Format a date as "10 July 2026, 9:47 AM"
+ * Formats a date as "10 July 2026, 9:47 AM" for the footer timestamp.
  */
 function formatFullDateTime(dateString) {
     const date = new Date(dateString);
-    const months = ['January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'];
+    const months = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December',
+    ];
 
     const day = date.getDate();
     const month = months[date.getMonth()];
@@ -482,47 +503,47 @@ function formatFullDateTime(dateString) {
     return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
 }
 
-/**
- * Update last updated time in footer
- */
 function updateLastUpdatedTime(lastUpdated) {
-    document.getElementById('lastUpdated').textContent = formatFullDateTime(lastUpdated);
+    dom.lastUpdated.textContent = formatFullDateTime(lastUpdated);
 }
 
-/**
- * Update result count
- */
 function updateResultCount(count) {
-    document.getElementById('resultCount').textContent =
-        `${count} ${count === 1 ? 'repository' : 'repositories'} found`;
+    dom.resultCount.textContent = `${count} ${count === 1 ? 'repository' : 'repositories'} found`;
 }
 
-/**
- * Check for new repositories
- */
-function checkForNewRepos() {
-    const stored = JSON.parse(localStorage.getItem('lastRepos') || '[]');
-
-    if (allRepos.length > 0 && stored.length > 0) {
-        const newRepos = allRepos.filter(
-            r => !stored.some(s => s.id === r.id)
-        );
-
-        if (newRepos.length > 0) {
-            showNotification(`🎉 Found ${newRepos.length} new repository(ies)!`);
-            localStorage.setItem('lastRepos', JSON.stringify(allRepos));
-        }
-    } else if (allRepos.length > 0) {
-        localStorage.setItem('lastRepos', JSON.stringify(allRepos));
-    }
+// ============================================================
+// Event Handlers
+// ============================================================
+function handleClearFiltersClick() {
+    dom.searchInput.value = '';
+    dom.technologyFilter.value = '';
+    dom.sortBy.value = DEFAULT_SORT;
+    applyFilters();
 }
 
-/**
- * Clear all filters
- */
-function clearFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('technologyFilter').value = '';
-    document.getElementById('sortBy').value = 'updated';
-    filterAndRender();
+function handleDarkModeToggleClick() {
+    state.darkMode = !state.darkMode;
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem(STORAGE_KEYS.DARK_MODE, state.darkMode);
+    updateDarkModeIcon();
 }
+
+function handleLayoutToggleClick() {
+    state.layout = state.layout === LAYOUT.CARD ? LAYOUT.TABLE : LAYOUT.CARD;
+    localStorage.setItem(STORAGE_KEYS.LAYOUT, state.layout);
+    renderRepositories(state.filteredRepositories);
+}
+
+function setupEventListeners() {
+    dom.searchInput.addEventListener('input', applyFilters);
+    dom.technologyFilter.addEventListener('change', applyFilters);
+    dom.sortBy.addEventListener('change', applyFilters);
+    dom.clearFiltersBtn.addEventListener('click', handleClearFiltersClick);
+    dom.darkModeToggle.addEventListener('click', handleDarkModeToggleClick);
+    dom.layoutToggle.addEventListener('click', handleLayoutToggleClick);
+}
+
+// ============================================================
+// Application Startup
+// ============================================================
+document.addEventListener('DOMContentLoaded', initializeApp);

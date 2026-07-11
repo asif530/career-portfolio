@@ -1,69 +1,89 @@
-/* Custom styles for GitHub Portfolio */
+/* ============================================================
+   GitHub Portfolio - Stylesheet
+   Custom styles layered on top of Bootstrap 5.
+   ============================================================ */
 
+/* ============================================================
+   Root Variables
+   ============================================================ */
 :root {
     --primary-color: #667eea;
     --secondary-color: #764ba2;
+
+    --card-border-color: #e0e0e0;
+    --shadow-color-light: rgba(0, 0, 0, 0.1);
+    --shadow-color-dark: rgba(255, 255, 255, 0.1);
+
+    --dark-bg: #1a1a1a;
+    --dark-bg-navbar: #0d0d0d;
+    --dark-bg-surface: #2d2d2d;
+    --dark-bg-surface-alt: #1e1e1e;
+    --dark-border: #444;
+    --dark-text: #e0e0e0;
+    --dark-hover-bg: #404040;
+
+    --filters-top-offset: 56px;
 }
 
-/* Dark mode styles */
-body.dark-mode {
-    background-color: #1a1a1a;
-    color: #e0e0e0;
+/* ============================================================
+   Base
+   Smooth color/background transitions for surfaces affected by
+   the dark mode toggle. Scoped to these elements instead of "*"
+   so unrelated elements aren't forced to transition every frame.
+   ============================================================ */
+body,
+.navbar,
+.bg-light,
+.bg-white,
+.card,
+.table,
+.form-control,
+.form-select,
+#filters {
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-body.dark-mode .navbar {
-    background-color: #0d0d0d !important;
+/* ============================================================
+   Layout
+   ============================================================ */
+#emptyState {
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
-body.dark-mode .bg-light {
-    background-color: #2d2d2d !important;
+/* ============================================================
+   Filters
+   ============================================================ */
+#filters {
+    top: var(--filters-top-offset);
+    z-index: 99;
+    box-shadow: 0 2px 5px var(--shadow-color-light);
 }
 
-body.dark-mode .bg-white {
-    background-color: #1e1e1e !important;
+/* ============================================================
+   Profile
+   ============================================================ */
+.social-links a {
+    margin: 0 5px;
+    transition: transform 0.2s;
 }
 
-body.dark-mode .card {
-    background-color: #2d2d2d;
-    border-color: #444;
-    color: #e0e0e0;
+.social-links a:hover {
+    transform: scale(1.1);
 }
 
-body.dark-mode .table {
-    color: #e0e0e0;
-}
-
-body.dark-mode .table-hover tbody tr:hover {
-    background-color: #404040;
-}
-
-body.dark-mode .form-control,
-body.dark-mode .form-select {
-    background-color: #2d2d2d;
-    color: #e0e0e0;
-    border-color: #444;
-}
-
-body.dark-mode .form-control:focus,
-body.dark-mode .form-select:focus {
-    background-color: #2d2d2d;
-    color: #e0e0e0;
-    border-color: var(--primary-color);
-}
-
-/* Repository cards */
+/* ============================================================
+   Repository Cards
+   ============================================================ */
 .repo-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--card-border-color);
 }
 
 .repo-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-}
-
-body.dark-mode .repo-card:hover {
-    box-shadow: 0 10px 25px rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 25px var(--shadow-color-light);
 }
 
 .repo-name {
@@ -76,23 +96,11 @@ body.dark-mode .repo-card:hover {
     text-decoration: underline;
 }
 
-/* Badges */
 .badge {
     font-size: 0.8rem;
     font-weight: 500;
 }
 
-/* Profile section */
-.social-links a {
-    margin: 0 5px;
-    transition: transform 0.2s;
-}
-
-.social-links a:hover {
-    transform: scale(1.1);
-}
-
-/* Tags */
 .tags {
     display: flex;
     flex-wrap: wrap;
@@ -103,30 +111,80 @@ body.dark-mode .repo-card:hover {
     margin-bottom: 5px;
 }
 
-/* Sticky filters */
-#filters {
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+/* ============================================================
+   Table View
+   Visibility is controlled at runtime via Bootstrap's "d-none"
+   utility class (see index.html / script.js).
+   ============================================================ */
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.btn,
+input,
+select {
+    transition: background-color 0.2s, color 0.2s, transform 0.2s;
+}
+
+/* ============================================================
+   Dark Mode
+   ============================================================ */
+body.dark-mode {
+    background-color: var(--dark-bg);
+    color: var(--dark-text);
+}
+
+body.dark-mode .navbar {
+    background-color: var(--dark-bg-navbar) !important;
+}
+
+body.dark-mode .bg-light {
+    background-color: var(--dark-bg-surface) !important;
+}
+
+body.dark-mode .bg-white {
+    background-color: var(--dark-bg-surface-alt) !important;
+}
+
+body.dark-mode .card {
+    background-color: var(--dark-bg-surface);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+body.dark-mode .table {
+    color: var(--dark-text);
+}
+
+body.dark-mode .table-hover tbody tr:hover {
+    background-color: var(--dark-hover-bg);
+}
+
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+    background-color: var(--dark-bg-surface);
+    color: var(--dark-text);
+    border-color: var(--dark-border);
+}
+
+body.dark-mode .form-control:focus,
+body.dark-mode .form-select:focus {
+    background-color: var(--dark-bg-surface);
+    color: var(--dark-text);
+    border-color: var(--primary-color);
+}
+
+body.dark-mode .repo-card:hover {
+    box-shadow: 0 10px 25px var(--shadow-color-dark);
 }
 
 body.dark-mode #filters {
-    box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 5px var(--shadow-color-dark);
 }
 
-/* Loading state */
-.loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-/* Empty state */
-#emptyState {
-    min-height: 300px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-/* Responsive adjustments */
+/* ============================================================
+   Responsive
+   ============================================================ */
 @media (max-width: 768px) {
     .navbar-collapse {
         margin-top: 10px;
@@ -148,14 +206,26 @@ body.dark-mode #filters {
     }
 }
 
-/* Smooth transitions */
-* {
-    transition: background-color 0.3s ease, color 0.3s ease;
+/* ============================================================
+   Utilities
+   ============================================================ */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
 }
 
-.repo-card,
-.btn,
-input,
-select {
-    transition: background-color 0.2s, color 0.2s, transform 0.2s !important;
-}
+/* ============================================================
+   FILE ORGANIZATION
+
+   1. Root Variables    - design tokens (colors, dark mode palette)
+   2. Base              - shared transition rules for themed surfaces
+   3. Layout             - page-level layout helpers (empty state)
+   4. Filters            - sticky search/filter bar
+   5. Profile            - profile section / social links
+   6. Repository Cards   - card view styling
+   7. Table View         - notes on table visibility toggling
+   8. Buttons            - interactive control transitions
+   9. Dark Mode          - all dark theme overrides, grouped together
+   10. Responsive         - small-viewport adjustments
+   11. Utilities          - reusable single-purpose helper classes
+   ============================================================ */
