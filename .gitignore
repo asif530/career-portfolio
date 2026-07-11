@@ -27,3 +27,6 @@ npm-debug.log
 # Build output
 dist/
 build/
+
+# Personal notes (untracked)
+ARCHITECTURE_NOTES.md

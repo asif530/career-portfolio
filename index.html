@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="GitHub Portfolio - asif530. Showcasing 63+ repositories built with modern technologies.">
-    <title>Career Portfolio - asif530</title>
+    <meta name="description" content="GitHub Portfolio - Asif Kamal. Showcasing repositories built with modern technologies.">
+    <title>Career Portfolio - Asif KamalKamal</title>
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -19,6 +19,16 @@
     <meta property="og:title" content="Career Portfolio - asif530">
     <meta property="og:description" content="GitHub Portfolio showcasing 63+ repositories">
     <meta property="og:type" content="website">
+    <meta property="og:url" content="https://asif530.github.io/portfolio">
+    <meta property="og:image" content="https://avatars.githubusercontent.com/u/44407951?v=4&s=400">
+    <meta property="og:image:width" content="400">
+    <meta property="og:image:height" content="400">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Career Portfolio - Asif Kamal">
+    <meta name="twitter:description" content="GitHub Portfolio showcasing 63+ repositories">
+    <meta name="twitter:image" content="https://avatars.githubusercontent.com/u/44407951?v=4&s=400">
 </head>
 <body>
     <!-- Navigation Bar -->
@@ -64,10 +74,10 @@
         <div class="container">
             <div class="row text-center">
                 <div class="col-md-12">
-                    <img src="https://avatars.githubusercontent.com/u/31234567?v=4"
+                    <img src="https://avatars.githubusercontent.com/u/44407951?v=4"
                          alt="Profile" class="rounded-circle mb-3" width="150" height="150">
                     <h1 class="mb-2">asif530</h1>
-                    <p class="lead mb-3">Java Backend Engineer | Spring Boot Specialist</p>
+                    <p class="lead mb-3">Backend Engineer</p>
                     <p class="text-muted">Building scalable microservices, exploring modern cloud technologies, and creating production-grade applications with Spring Boot, gRPC, and cloud-native patterns.</p>
 
                     <!-- Social Links -->
@@ -88,7 +98,7 @@
     </section>
 
     <!-- Search & Filter Section -->
-    <section id="filters" class="py-4 bg-white sticky-top" style="top: 56px; z-index: 99;">
+    <section id="filters" class="py-4 bg-white sticky-top">
         <div class="container">
             <div class="row g-3">
                 <div class="col-md-4">
@@ -109,7 +119,7 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                    <button class="btn btn-outline-secondary w-100" id="clearFiltersBtn">
                         <i class="fas fa-redo"></i> Clear
                     </button>
                 </div>
@@ -133,7 +143,7 @@
             </div>
 
             <!-- Table View (Hidden by default) -->
-            <div id="tableView" style="display: none;">
+            <div id="tableView" class="d-none">
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead class="table-dark">
@@ -154,7 +164,7 @@
             </div>
 
             <!-- Empty State -->
-            <div id="emptyState" style="display: none;" class="text-center py-5">
+            <div id="emptyState" class="d-none text-center py-5">
                 <i class="fas fa-search fa-3x text-muted mb-3"></i>
                 <h4>No repositories found</h4>
                 <p class="text-muted">Try adjusting your search or filters</p>
