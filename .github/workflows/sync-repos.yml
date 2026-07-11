@@ -96,12 +96,53 @@ jobs:
         run: |
           cp repos-current.json repos-previous.json
 
+      - name: Fetch profile info from GitHub API
+        run: |
+          curl -H "Authorization: token ${{ secrets.REPOS_PAT }}" \
+            "https://api.github.com/user" \
+            > github-user.json
+
+      - name: Generate profile.json
+        run: |
+          # Overlay name/bio/avatarUrl from the GitHub API onto profile-defaults.json,
+          # falling back to the default value whenever the API field is null/empty.
+          jq -n \
+            --slurpfile defaults profile-defaults.json \
+            --slurpfile user github-user.json \
+            '
+            ($defaults[0]) as $d |
+            ($user[0]) as $u |
+            $d
+            | .name = (if (($u.name // "") | length) > 0 then $u.name else $d.name end)
+            | .bio = (if (($u.bio // "") | length) > 0 then $u.bio else $d.bio end)
+            | .avatarUrl = (if (($u.avatar_url // "") | length) > 0 then $u.avatar_url else $d.avatarUrl end)
+            ' > profile.json
+
+      - name: Generate index.html from template
+        run: |
+          NAME=$(jq -r '.name' profile.json)
+          AVATAR=$(jq -r '.avatarUrl' profile.json)
+          TITLE_PREFIX=$(jq -r '.site.titlePrefix' profile.json)
+          DESC_PREFIX=$(jq -r '.site.descriptionPrefix' profile.json)
+          DESC_SUFFIX=$(jq -r '.site.descriptionSuffix' profile.json)
+          REPO_COUNT=$(jq -r '.metadata.totalCount' repos.json)
+
+          export SITE_TITLE="${TITLE_PREFIX} - ${NAME}"
+          export SITE_DESCRIPTION="${DESC_PREFIX} ${REPO_COUNT} ${DESC_SUFFIX}"
+          export SITE_URL=$(jq -r '.site.url' profile.json)
+          export OG_IMAGE_URL="${AVATAR}&s=400"
+          export OG_IMAGE_WIDTH=$(jq -r '.site.ogImageWidth' profile.json)
+          export OG_IMAGE_HEIGHT=$(jq -r '.site.ogImageHeight' profile.json)
+
+          envsubst '${SITE_TITLE} ${SITE_DESCRIPTION} ${SITE_URL} ${OG_IMAGE_URL} ${OG_IMAGE_WIDTH} ${OG_IMAGE_HEIGHT}' \
+            < index.template.html > index.html
+
       - name: Commit and push changes
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
 
-          git add repos.json repos-previous.json
+          git add repos.json repos-previous.json profile.json index.html
 
           if [ "${{ env.NEW_REPOS_FOUND }}" = "true" ] && [ "${{ env.RENAMED_REPOS_FOUND }}" = "true" ]; then
             git commit -m "🎉 Found ${{ env.NEW_COUNT }} new repo(s), ${{ env.RENAMED_COUNT }} renamed - $(date +'%Y-%m-%d %H:%M:%S UTC')"

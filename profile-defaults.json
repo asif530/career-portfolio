@@ -1,0 +1,64 @@
+{
+  "name": "Asif Kamal",
+  "title": "Backend Engineer",
+  "bio": "Building scalable microservices, exploring modern cloud technologies, and creating production-grade applications with Spring Boot, gRPC, and cloud-native patterns.",
+  "avatarUrl": "https://avatars.githubusercontent.com/u/44407951?v=4",
+  "socialLinks": [
+    { "label": "GitHub", "icon": "fab fa-github", "url": "https://github.com/asif530", "buttonClass": "btn-dark" },
+    { "label": "Email", "icon": "fas fa-envelope", "url": "mailto:asifkamal530@gmail.com", "buttonClass": "btn-danger" },
+    { "label": "LinkedIn", "icon": "fab fa-linkedin", "url": "https://linkedin.com/in/asif530", "buttonClass": "btn-info" }
+  ],
+  "repositories": {
+    "heading": "GitHub Repositories"
+  },
+  "about": {
+    "heading": "About Me",
+    "paragraphs": [
+      "I'm a passionate Java backend engineer with expertise in building scalable microservices using Spring Boot and modern cloud technologies.",
+      "With 4+ years of experience, I specialize in:"
+    ],
+    "highlights": [
+      "Spring Boot (3.x & 4.x) application development",
+      "Microservices architecture and distributed systems",
+      "gRPC and Protocol Buffers for efficient communication",
+      "Database design (PostgreSQL, Hibernate ORM)",
+      "Message brokers (RabbitMQ, Kafka)",
+      "Cloud observability (Prometheus, Grafana, OpenTelemetry)",
+      "CI/CD pipelines and DevOps practices"
+    ],
+    "skillsHeading": "Key Technologies",
+    "skills": [
+      { "label": "Java", "badgeClass": "bg-primary" },
+      { "label": "Spring Boot", "badgeClass": "bg-primary" },
+      { "label": "PostgreSQL", "badgeClass": "bg-success" },
+      { "label": "gRPC", "badgeClass": "bg-success" },
+      { "label": "Docker", "badgeClass": "bg-info" },
+      { "label": "Kubernetes", "badgeClass": "bg-info" },
+      { "label": "RabbitMQ", "badgeClass": "bg-warning" },
+      { "label": "Kafka", "badgeClass": "bg-warning" },
+      { "label": "REST APIs", "badgeClass": "bg-danger" }
+    ]
+  },
+  "contact": {
+    "heading": "Get in Touch",
+    "intro": "Feel free to reach out through any of these channels:",
+    "channels": [
+      { "icon": "fas fa-envelope", "label": "asifkamal530@gmail.com", "url": "mailto:asifkamal530@gmail.com", "external": false },
+      { "icon": "fab fa-github", "label": "github.com/asif530", "url": "https://github.com/asif530", "external": true },
+      { "icon": "fab fa-linkedin", "label": "linkedin.com/in/asif530", "url": "https://linkedin.com/in/asif530", "external": true }
+    ]
+  },
+  "footer": {
+    "copyrightName": "asif530",
+    "sourceLabel": "View Source",
+    "sourceUrl": "https://github.com/asif530/career-portfolio"
+  },
+  "site": {
+    "titlePrefix": "Career Portfolio",
+    "descriptionPrefix": "GitHub Portfolio showcasing",
+    "descriptionSuffix": "repositories",
+    "url": "https://asif530.github.io/career-portfolio/",
+    "ogImageWidth": 400,
+    "ogImageHeight": 400
+  }
+}
