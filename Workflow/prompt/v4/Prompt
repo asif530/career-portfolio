@@ -1,0 +1,15 @@
+(Ad-hoc chat request, not a written spec file — logged here for the version trail.)
+
+Make a basic workflow how this repo works? Like when you merge into main a
+github action runs. It uses script to populate data at build time. The
+developer likes to have fallback when data is missing. Very interested in
+making as much as dynamic data population. Analyze this project as a
+technical frontend developer who knows bash, github action. Based on your
+analysis make the workflow, how it works etc.
+
+Clarified via follow-up questions:
+- Add a push-to-main trigger to the workflow (in addition to the existing
+  schedule + workflow_dispatch triggers).
+- Deliver the analysis as a visual HTML artifact, not a markdown doc.
+- Propose concrete new dynamic-data fields to pull from the GitHub API
+  (not just review the existing ones).
