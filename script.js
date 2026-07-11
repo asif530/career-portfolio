@@ -8,6 +8,7 @@
 // Configuration / Constants
 // ============================================================
 const DATA_URL = 'repos.json';
+const PROFILE_DATA_URL = 'profile.json';
 
 const LAYOUT = {
     CARD: 'card',
@@ -44,6 +45,7 @@ const state = {
     filteredRepositories: [],
     layout: LAYOUT.CARD,
     darkMode: false,
+    profile: null,
 };
 
 // ============================================================
@@ -68,6 +70,23 @@ function cacheDomElements() {
     // First ".container" in the DOM (inside the profile section) is used
     // as the anchor point for inserting alerts above the page content.
     dom.alertAnchor = document.querySelector('.container');
+
+    dom.profileAvatar = document.getElementById('profileAvatar');
+    dom.profileName = document.getElementById('profileName');
+    dom.profileTitle = document.getElementById('profileTitle');
+    dom.profileBio = document.getElementById('profileBio');
+    dom.profileSocialLinks = document.getElementById('profileSocialLinks');
+    dom.repositoriesHeading = document.getElementById('repositoriesHeading');
+    dom.aboutHeading = document.getElementById('aboutHeading');
+    dom.aboutParagraphs = document.getElementById('aboutParagraphs');
+    dom.aboutHighlights = document.getElementById('aboutHighlights');
+    dom.aboutSkillsHeading = document.getElementById('aboutSkillsHeading');
+    dom.aboutSkills = document.getElementById('aboutSkills');
+    dom.contactHeading = document.getElementById('contactHeading');
+    dom.contactIntro = document.getElementById('contactIntro');
+    dom.contactChannels = document.getElementById('contactChannels');
+    dom.footerCopyright = document.getElementById('footerCopyright');
+    dom.footerSourceLink = document.getElementById('footerSourceLink');
 }
 
 // ============================================================
@@ -78,12 +97,35 @@ function initializeApp() {
     initializeDarkMode();
     loadSavedLayout();
     setupEventListeners();
+    loadProfile();
     loadRepositories();
 }
 
 // ============================================================
 // Data Loading
 // ============================================================
+
+/**
+ * Loads profile.json and renders the Profile/About/Contact/Footer sections.
+ * Runs independently of loadRepositories() so a failure in one never blocks
+ * the other from rendering.
+ */
+async function loadProfile() {
+    try {
+        const response = await fetch(PROFILE_DATA_URL);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        state.profile = await response.json();
+        renderProfile(state.profile);
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        showError('Failed to load profile information. Please try again later.');
+    }
+}
+
 async function loadRepositories() {
     try {
         const response = await fetch(DATA_URL);
@@ -329,6 +371,94 @@ function updateLayoutVisibility() {
     const isCardView = state.layout === LAYOUT.CARD;
     dom.cardView.classList.toggle('d-none', !isCardView);
     dom.tableView.classList.toggle('d-none', isCardView);
+}
+
+// ============================================================
+// Profile Rendering
+// ============================================================
+function renderProfile(profile) {
+    dom.profileAvatar.src = profile.avatarUrl;
+    dom.profileName.textContent = profile.name;
+    dom.profileTitle.textContent = profile.title;
+    dom.profileBio.textContent = profile.bio;
+
+    renderSocialLinks(profile.socialLinks);
+    renderRepositoriesHeading(profile.repositories.heading);
+    renderAbout(profile.about);
+    renderContact(profile.contact);
+    renderFooter(profile.footer);
+}
+
+function renderSocialLinks(socialLinks) {
+    dom.profileSocialLinks.innerHTML = '';
+    socialLinks.forEach(link => dom.profileSocialLinks.appendChild(createSocialLink(link)));
+}
+
+function createSocialLink(link) {
+    const anchor = document.createElement('a');
+    anchor.href = link.url;
+    anchor.className = `btn ${link.buttonClass} btn-sm me-2`;
+    if (link.url.startsWith('http')) {
+        anchor.target = '_blank';
+    }
+    anchor.innerHTML = `<i class="${link.icon}"></i> ${link.label}`;
+    return anchor;
+}
+
+function renderRepositoriesHeading(heading) {
+    dom.repositoriesHeading.textContent = heading;
+}
+
+function renderAbout(about) {
+    dom.aboutHeading.textContent = about.heading;
+    dom.aboutSkillsHeading.textContent = about.skillsHeading;
+
+    dom.aboutParagraphs.innerHTML = '';
+    about.paragraphs.forEach(text => {
+        const paragraph = document.createElement('p');
+        paragraph.textContent = text;
+        dom.aboutParagraphs.appendChild(paragraph);
+    });
+
+    dom.aboutHighlights.innerHTML = '';
+    about.highlights.forEach(text => {
+        const item = document.createElement('li');
+        item.textContent = text;
+        dom.aboutHighlights.appendChild(item);
+    });
+
+    dom.aboutSkills.innerHTML = '';
+    about.skills.forEach(skill => dom.aboutSkills.appendChild(createBadge(skill.label, skill.badgeClass)));
+}
+
+function renderContact(contact) {
+    dom.contactHeading.textContent = contact.heading;
+    dom.contactIntro.textContent = contact.intro;
+
+    dom.contactChannels.innerHTML = '';
+    contact.channels.forEach(channel => {
+        const item = document.createElement('li');
+        item.className = 'mb-3';
+        item.appendChild(createContactLink(channel));
+        dom.contactChannels.appendChild(item);
+    });
+}
+
+function createContactLink(channel) {
+    const link = document.createElement('a');
+    link.href = channel.url;
+    link.className = 'text-decoration-none';
+    if (channel.external) {
+        link.target = '_blank';
+    }
+    link.innerHTML = `<i class="${channel.icon} me-2"></i> ${channel.label}`;
+    return link;
+}
+
+function renderFooter(footer) {
+    dom.footerCopyright.textContent = `© ${new Date().getFullYear()} ${footer.copyrightName}. All repositories are open source.`;
+    dom.footerSourceLink.href = footer.sourceUrl;
+    dom.footerSourceLink.textContent = footer.sourceLabel;
 }
 
 // ============================================================
