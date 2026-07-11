@@ -1,0 +1,34 @@
+name: Sync GitHub Repos Daily
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:      # Manual trigger button in GitHub UI
+
+jobs:
+  sync-repos:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run sync script
+        id: sync
+        env:
+          REPOS_PAT: ${{ secrets.REPOS_PAT }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: bash scripts/sync.sh
+
+      - name: Commit and push changes
+        env:
+          COMMIT_MESSAGE: ${{ steps.sync.outputs.commit_message }}
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+          git add repos.json repos-previous.json profile.json index.html
+          git commit -m "$COMMIT_MESSAGE" || echo "Nothing to commit"
+          git push

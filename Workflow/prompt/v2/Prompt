@@ -1,0 +1,381 @@
+# Task
+
+Refactor the attached GitHub Actions workflow to improve its maintainability, readability, robustness, and long-term maintainability **without changing its observable behavior**.
+
+This is a **strict refactoring task**.
+
+The current workflow is already working correctly. Do not redesign it. Do not rewrite it in another language. Do not introduce unnecessary abstractions.
+
+The goal is to make it look like production infrastructure code that would pass a senior engineer's code review.
+
+---
+
+# Guiding Philosophy
+
+This project is intentionally small.
+
+Do **not** over-engineer it.
+
+I do **not** want a framework.
+
+I do **not** want six tiny shell scripts.
+
+I do **not** want unnecessary abstractions.
+
+I want a clean, maintainable solution that matches the size of the project.
+
+The GitHub Action should orchestrate.
+
+A single, well-structured Bash script should implement the business logic.
+
+---
+
+# Desired Project Structure
+
+Refactor toward this structure:
+
+```text
+.github/
+└── workflows/
+    └── sync.yml
+
+scripts/
+└── sync.sh
+
+profile-defaults.json
+index.template.html
+repos.json
+profile.json
+repos-previous.json
+```
+
+Unless there is a compelling engineering reason, do not introduce additional scripts.
+
+If you believe another file is necessary, justify it.
+
+---
+
+# Architecture
+
+The GitHub workflow should contain only orchestration.
+
+It should roughly read as:
+
+```text
+Checkout
+
+↓
+
+Run sync.sh
+
+↓
+
+Commit generated files
+
+↓
+
+Push
+```
+
+The workflow itself should explain **what happens**.
+
+The Bash script should explain **how it happens**.
+
+---
+
+# Business Logic
+
+Move all implementation details into `scripts/sync.sh`.
+
+Organize the script using small, well-named functions instead of one long procedural script.
+
+For example:
+
+```text
+main()
+
+fetchRepositories()
+
+fetchProfile()
+
+fetchLanguages()
+
+detectRepositoryChanges()
+
+generateReposJson()
+
+generateProfileJson()
+
+generateWebsite()
+
+updatePreviousSnapshot()
+
+buildCommitMessage()
+```
+
+Use function names that are self-explanatory.
+
+The code should require very few comments.
+
+---
+
+# Preserve Existing Features
+
+Everything currently implemented must continue working exactly as before.
+
+Including:
+
+* scheduled execution
+* manual execution
+* repository synchronization
+* repository rename detection
+* repository creation detection
+* profile generation
+* language aggregation
+* website generation
+* git commit
+* git push
+
+Do not remove any feature.
+
+---
+
+# Preserve Existing Output
+
+The generated files are already consumed by the website.
+
+Do not change:
+
+* repos.json schema
+* profile.json schema
+* metadata field names
+* language structure
+* generated HTML behavior
+
+unless correcting an actual bug.
+
+For identical GitHub API responses, the generated outputs should remain identical.
+
+---
+
+# Code Quality
+
+Treat `sync.sh` like production software.
+
+It should begin with:
+
+```bash
+set -Eeuo pipefail
+```
+
+Use:
+
+* proper quoting
+* meaningful variable names
+* reusable functions
+* consistent formatting
+* defensive programming
+
+Avoid giant procedural blocks.
+
+---
+
+# Create Reusable Helpers
+
+Avoid repeating identical code.
+
+For example, create helpers such as:
+
+```text
+githubApi()
+
+log()
+
+warn()
+
+error()
+
+requireCommand()
+```
+
+Instead of repeating curl commands throughout the script, create a reusable GitHub API helper.
+
+For example:
+
+```bash
+githubApi "/user"
+
+githubApi "/user/repos"
+
+githubApi "/repos/{owner}/{repo}/languages"
+```
+
+The implementation should avoid duplication.
+
+---
+
+# Improve curl Usage
+
+Replace plain curl calls with robust versions.
+
+Use:
+
+* --fail
+* --silent
+* --show-error
+
+The workflow should stop immediately if a GitHub API request fails.
+
+Do not silently continue after failed API requests.
+
+---
+
+# Reduce Temporary Files
+
+The current workflow creates several intermediate files only to transfer data between commands.
+
+Remove unnecessary temporary files where doing so improves readability.
+
+Prefer:
+
+* variables
+* functions
+* process substitution
+
+However, keep files that intentionally represent generated artifacts or persisted state.
+
+Do not optimize purely for reducing file count.
+
+Optimize for readability.
+
+---
+
+# Reduce Repeated jq Parsing
+
+Avoid repeatedly parsing the same JSON file.
+
+Consolidate related jq operations where appropriate.
+
+However:
+
+Do not replace readable code with unreadable jq one-liners.
+
+Maintainability is more important than saving a few milliseconds.
+
+---
+
+# Simplify Commit Message Logic
+
+Generate the commit message once.
+
+Store it in a variable (or temporary file if appropriate).
+
+Call `git commit` exactly once.
+
+Avoid duplicated commit logic.
+
+---
+
+# GitHub Action Outputs
+
+Reduce unnecessary workflow-wide environment variables.
+
+Prefer step outputs when values only need to be shared between workflow steps.
+
+Use environment variables only for actual shared workflow state.
+
+---
+
+# Pagination
+
+The repository fetch currently uses:
+
+```
+per_page=100
+```
+
+Evaluate whether GitHub API pagination should be implemented.
+
+If implemented:
+
+* keep it simple
+* preserve behavior
+* avoid unnecessary abstractions
+
+If you decide not to implement pagination, explain your reasoning.
+
+---
+
+# Language Aggregation
+
+The language aggregation currently performs one GitHub API request per repository.
+
+Review this implementation.
+
+Improve it only if the improvement clearly increases maintainability or robustness.
+
+Do not parallelize requests simply because it is possible.
+
+Readability and simplicity are preferred over micro-optimizations.
+
+---
+
+# Preserve Existing Good Design
+
+Do not remove the following existing design decisions.
+
+They are intentional.
+
+* Repository ID based rename detection.
+* Profile fallback mechanism.
+* Metadata generation.
+* Website generation pipeline.
+* Language aggregation.
+* Previous repository snapshot.
+* Scheduled execution.
+* Manual execution.
+
+---
+
+# Comments
+
+Prefer self-explanatory code.
+
+Comments should explain **why**, not **what**.
+
+Delete comments that merely restate the implementation.
+
+---
+
+# Deliverables
+
+Produce:
+
+1. The refactored GitHub Actions workflow.
+2. The new `scripts/sync.sh`.
+3. A walkthrough of the new architecture.
+4. Explanation of every structural improvement.
+5. Confirmation that observable behavior has not changed.
+6. Any intentional behavior changes, with justification.
+7. Trade-offs considered during the refactoring.
+
+---
+
+# Success Criteria
+
+The finished project should feel like something maintained by an experienced backend engineer.
+
+It should be:
+
+* easy to read
+* easy to extend
+* easy to debug
+* easy to review
+
+The workflow YAML should act as an orchestrator.
+
+The Bash script should contain clean, well-organized production-quality logic.
+
+Avoid both under-engineering and over-engineering.
+
+Choose the simplest design that remains maintainable for the foreseeable future.
