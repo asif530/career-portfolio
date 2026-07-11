@@ -37,7 +37,8 @@
       { "label": "RabbitMQ", "badgeClass": "bg-warning" },
       { "label": "Kafka", "badgeClass": "bg-warning" },
       { "label": "REST APIs", "badgeClass": "bg-danger" }
-    ]
+    ],
+    "languagesHeading": "Language Breakdown"
   },
   "contact": {
     "heading": "Get in Touch",

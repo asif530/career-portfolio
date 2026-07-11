@@ -118,6 +118,33 @@ jobs:
             | .avatarUrl = (if (($u.avatar_url // "") | length) > 0 then $u.avatar_url else $d.avatarUrl end)
             ' > profile.json
 
+      - name: Fetch per-repo language breakdown
+        run: |
+          rm -f repo-languages.jsonl
+          touch repo-languages.jsonl
+          for repo in $(jq -r '.[].name' repos-current.json); do
+            curl -s -H "Authorization: token ${{ secrets.REPOS_PAT }}" \
+              "https://api.github.com/repos/${{ github.repository_owner }}/${repo}/languages" \
+              >> repo-languages.jsonl
+          done
+
+      - name: Aggregate language totals and merge into profile.json
+        run: |
+          # Sum bytes per language across every repo, convert to whole-number
+          # percentages of the account-wide total, and keep the top 8.
+          jq -s '
+            ([.[] | to_entries[]]) as $entries |
+            ($entries | group_by(.key) | map({key: .[0].key, value: (map(.value) | add)})) as $totals |
+            ($totals | map(.value) | add) as $grandTotal |
+            $totals
+            | map({label: .key, percentage: ((.value / $grandTotal * 100) | round)})
+            | sort_by(-.percentage)
+            | .[0:8]
+          ' repo-languages.jsonl > about-languages.json
+
+          jq --slurpfile langs about-languages.json '.about.languages = $langs[0]' profile.json > profile.json.tmp
+          mv profile.json.tmp profile.json
+
       - name: Generate index.html from template
         run: |
           NAME=$(jq -r '.name' profile.json)
