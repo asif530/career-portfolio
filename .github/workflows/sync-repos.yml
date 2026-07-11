@@ -15,170 +15,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Fetch current repos from GitHub API
-        run: |
-          curl -H "Authorization: token ${{ secrets.REPOS_PAT }}" \
-            "https://api.github.com/user/repos?per_page=100&sort=updated&affiliation=owner" \
-            > repos-current.json
-
-      - name: Check if previous repos file exists
-        id: check_file
-        run: |
-          if [ -f repos-previous.json ]; then
-            echo "file_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "file_exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Compare repos and find new ones
-        if: steps.check_file.outputs.file_exists == 'true'
-        run: |
-          # Extract repo ids (stable across renames, unlike name)
-          cat repos-current.json | jq -r '.[].id' | sort > current-ids.txt
-          cat repos-previous.json | jq -r '.[].id' | sort > previous-ids.txt
-
-          # Find new repos (id in current but not in previous)
-          comm -23 current-ids.txt previous-ids.txt > new-repo-ids.txt
-
-          # Count new repos
-          NEW_COUNT=$(wc -l < new-repo-ids.txt)
-          echo "Found $NEW_COUNT new repositories"
-
-          if [ $NEW_COUNT -gt 0 ]; then
-            echo "NEW_REPOS_FOUND=true" >> $GITHUB_ENV
-            echo "NEW_COUNT=$NEW_COUNT" >> $GITHUB_ENV
-            # Resolve ids back to names for a readable log
-            jq -r --slurpfile ids new-repo-ids.txt \
-              '.[] | select(.id as $i | $ids | index($i)) | .name' \
-              repos-current.json
-          fi
-
-      - name: Detect renamed repos
-        if: steps.check_file.outputs.file_exists == 'true'
-        run: |
-          # For ids present in both fetches, flag any whose name changed
-          RENAMES=$(jq -n --slurpfile prev repos-previous.json --slurpfile curr repos-current.json '
-            ($prev[0] | map({(.id|tostring): .name}) | add // {}) as $prevMap |
-            [ $curr[0][] | . as $c | ($prevMap[($c.id|tostring)]) as $old |
-                select($old != null and $old != $c.name) |
-                {id: $c.id, oldName: $old, newName: $c.name} ]
-          ')
-
-          RENAMED_COUNT=$(echo "$RENAMES" | jq 'length')
-          echo "Found $RENAMED_COUNT renamed repositories"
-
-          if [ "$RENAMED_COUNT" -gt 0 ]; then
-            echo "RENAMED_REPOS_FOUND=true" >> $GITHUB_ENV
-            echo "RENAMED_COUNT=$RENAMED_COUNT" >> $GITHUB_ENV
-            echo "$RENAMES" | jq -r '.[] | "\(.oldName) -> \(.newName)"'
-            echo "$RENAMES" > renamed-repos.json
-          fi
-
-      - name: Generate repos.json for website
-        run: |
-          RENAMES_JSON="[]"
-          if [ -f renamed-repos.json ]; then
-            RENAMES_JSON=$(cat renamed-repos.json)
-          fi
-
-          # Create JSON with metadata
-          cat repos-current.json | jq --argjson renames "$RENAMES_JSON" '{
-            repos: .,
-            metadata: {
-              totalCount: length,
-              lastUpdated: now | todate,
-              newReposFound: (if env.NEW_REPOS_FOUND == "true" then (env.NEW_COUNT | tonumber) else 0 end),
-              renamedRepos: $renames
-            }
-          }' > repos.json
-
-      - name: Update previous repos file
-        run: |
-          cp repos-current.json repos-previous.json
-
-      - name: Fetch profile info from GitHub API
-        run: |
-          curl -H "Authorization: token ${{ secrets.REPOS_PAT }}" \
-            "https://api.github.com/user" \
-            > github-user.json
-
-      - name: Generate profile.json
-        run: |
-          # Overlay name/bio/avatarUrl from the GitHub API onto profile-defaults.json,
-          # falling back to the default value whenever the API field is null/empty.
-          jq -n \
-            --slurpfile defaults profile-defaults.json \
-            --slurpfile user github-user.json \
-            '
-            ($defaults[0]) as $d |
-            ($user[0]) as $u |
-            $d
-            | .name = (if (($u.name // "") | length) > 0 then $u.name else $d.name end)
-            | .bio = (if (($u.bio // "") | length) > 0 then $u.bio else $d.bio end)
-            | .avatarUrl = (if (($u.avatar_url // "") | length) > 0 then $u.avatar_url else $d.avatarUrl end)
-            ' > profile.json
-
-      - name: Fetch per-repo language breakdown
-        run: |
-          rm -f repo-languages.jsonl
-          touch repo-languages.jsonl
-          for repo in $(jq -r '.[].name' repos-current.json); do
-            curl -s -H "Authorization: token ${{ secrets.REPOS_PAT }}" \
-              "https://api.github.com/repos/${{ github.repository_owner }}/${repo}/languages" \
-              >> repo-languages.jsonl
-          done
-
-      - name: Aggregate language totals and merge into profile.json
-        run: |
-          # Sum bytes per language across every repo, convert to whole-number
-          # percentages of the account-wide total, and keep the top 8.
-          jq -s '
-            ([.[] | to_entries[]]) as $entries |
-            ($entries | group_by(.key) | map({key: .[0].key, value: (map(.value) | add)})) as $totals |
-            ($totals | map(.value) | add) as $grandTotal |
-            $totals
-            | map({label: .key, percentage: ((.value / $grandTotal * 100) | round)})
-            | sort_by(-.percentage)
-            | .[0:8]
-          ' repo-languages.jsonl > about-languages.json
-
-          jq --slurpfile langs about-languages.json '.about.languages = $langs[0]' profile.json > profile.json.tmp
-          mv profile.json.tmp profile.json
-
-      - name: Generate index.html from template
-        run: |
-          NAME=$(jq -r '.name' profile.json)
-          AVATAR=$(jq -r '.avatarUrl' profile.json)
-          TITLE_PREFIX=$(jq -r '.site.titlePrefix' profile.json)
-          DESC_PREFIX=$(jq -r '.site.descriptionPrefix' profile.json)
-          DESC_SUFFIX=$(jq -r '.site.descriptionSuffix' profile.json)
-          REPO_COUNT=$(jq -r '.metadata.totalCount' repos.json)
-
-          export SITE_TITLE="${TITLE_PREFIX} - ${NAME}"
-          export SITE_DESCRIPTION="${DESC_PREFIX} ${REPO_COUNT} ${DESC_SUFFIX}"
-          export SITE_URL=$(jq -r '.site.url' profile.json)
-          export OG_IMAGE_URL="${AVATAR}&s=400"
-          export OG_IMAGE_WIDTH=$(jq -r '.site.ogImageWidth' profile.json)
-          export OG_IMAGE_HEIGHT=$(jq -r '.site.ogImageHeight' profile.json)
-
-          envsubst '${SITE_TITLE} ${SITE_DESCRIPTION} ${SITE_URL} ${OG_IMAGE_URL} ${OG_IMAGE_WIDTH} ${OG_IMAGE_HEIGHT}' \
-            < index.template.html > index.html
+      - name: Run sync script
+        id: sync
+        env:
+          REPOS_PAT: ${{ secrets.REPOS_PAT }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: bash scripts/sync.sh
 
       - name: Commit and push changes
+        env:
+          COMMIT_MESSAGE: ${{ steps.sync.outputs.commit_message }}
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
 
           git add repos.json repos-previous.json profile.json index.html
 
-          if [ "${{ env.NEW_REPOS_FOUND }}" = "true" ] && [ "${{ env.RENAMED_REPOS_FOUND }}" = "true" ]; then
-            git commit -m "🎉 Found ${{ env.NEW_COUNT }} new repo(s), ${{ env.RENAMED_COUNT }} renamed - $(date +'%Y-%m-%d %H:%M:%S UTC')"
-          elif [ "${{ env.NEW_REPOS_FOUND }}" = "true" ]; then
-            git commit -m "🎉 Found ${{ env.NEW_COUNT }} new repo(s) - $(date +'%Y-%m-%d %H:%M:%S UTC')"
-          elif [ "${{ env.RENAMED_REPOS_FOUND }}" = "true" ]; then
-            git commit -m "✏️ ${{ env.RENAMED_COUNT }} repo(s) renamed - $(date +'%Y-%m-%d %H:%M:%S UTC')"
-          else
-            git commit -m "📦 Synced repos from GitHub API - $(date +'%Y-%m-%d %H:%M:%S UTC')" || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
           fi
 
+          git commit -m "$COMMIT_MESSAGE"
           git push
