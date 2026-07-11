@@ -82,6 +82,8 @@ function cacheDomElements() {
     dom.aboutHighlights = document.getElementById('aboutHighlights');
     dom.aboutSkillsHeading = document.getElementById('aboutSkillsHeading');
     dom.aboutSkills = document.getElementById('aboutSkills');
+    dom.aboutLanguagesHeading = document.getElementById('aboutLanguagesHeading');
+    dom.aboutLanguages = document.getElementById('aboutLanguages');
     dom.contactHeading = document.getElementById('contactHeading');
     dom.contactIntro = document.getElementById('contactIntro');
     dom.contactChannels = document.getElementById('contactChannels');
@@ -429,6 +431,24 @@ function renderAbout(about) {
 
     dom.aboutSkills.innerHTML = '';
     about.skills.forEach(skill => dom.aboutSkills.appendChild(createBadge(skill.label, skill.badgeClass)));
+
+    renderLanguageBreakdown(about);
+}
+
+/**
+ * Renders the account-wide language breakdown computed by sync-repos.yml.
+ * about.languages is absent until the first sync run populates it, so this
+ * degrades to an empty, heading-less block rather than erroring.
+ */
+function renderLanguageBreakdown(about) {
+    const languages = about.languages || [];
+
+    dom.aboutLanguagesHeading.textContent = languages.length > 0 ? about.languagesHeading : '';
+
+    dom.aboutLanguages.innerHTML = '';
+    languages.forEach(language => {
+        dom.aboutLanguages.appendChild(createBadge(`${language.label} ${language.percentage}%`, 'bg-secondary'));
+    });
 }
 
 function renderContact(contact) {
